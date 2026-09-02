@@ -15,8 +15,8 @@ import (
 	"github.com/stellar/go-stellar-sdk/support/datastore"
 	"github.com/stellar/go-stellar-sdk/xdr"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/config"
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/config"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
 )
 
 func testGetLedgers(t *testing.T, client *client.Client) {

@@ -12,8 +12,8 @@ import (
 	"github.com/stellar/go-stellar-sdk/support/datastore"
 	supportlog "github.com/stellar/go-stellar-sdk/support/log"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/config"
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/db"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/config"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/db"
 )
 
 const (

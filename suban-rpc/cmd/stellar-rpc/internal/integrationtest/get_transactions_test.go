@@ -11,7 +11,7 @@ import (
 	protocol "github.com/stellar/go-stellar-sdk/protocols/rpc"
 	"github.com/stellar/go-stellar-sdk/txnbuild"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
 )
 
 // buildSetOptionsTxParams constructs the parameters necessary for creating a transaction from the given account.

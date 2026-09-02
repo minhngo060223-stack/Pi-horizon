@@ -36,8 +36,8 @@ import (
 	"github.com/stellar/go-stellar-sdk/txnbuild"
 	"github.com/stellar/go-stellar-sdk/xdr"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/config"
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/daemon"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/config"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/daemon"
 )
 
 const (

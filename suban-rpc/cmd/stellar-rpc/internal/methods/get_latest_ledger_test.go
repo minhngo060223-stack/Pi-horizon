@@ -12,8 +12,8 @@ import (
 	protocol "github.com/stellar/go-stellar-sdk/protocols/rpc"
 	"github.com/stellar/go-stellar-sdk/xdr"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/db"
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/ledgerbucketwindow"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/db"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/ledgerbucketwindow"
 )
 
 const (
@@ -133,7 +133,7 @@ func TestGetLatestLedger(t *testing.T) {
 }
 
 // TestGetLatestLedgerAcceptsEmptyParams verifies that getLatestLedger accepts
-// requests with empty params objects, fixing https://github.com/pi-node/pi-rpc/issues/551
+// requests with empty params objects, fixing https://github.com/Pi-Defi-world/suban-rpc/issues/551
 func TestGetLatestLedgerAcceptsEmptyParams(t *testing.T) {
 	getLatestLedgerHandler := NewGetLatestLedgerHandler(&ConstantLedgerReader{})
 

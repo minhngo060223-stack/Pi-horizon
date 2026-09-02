@@ -91,7 +91,7 @@ func TestNewHandlerAcceptsEmptyParams(t *testing.T) {
 	assert.Equal(t, 1, callCount)
 
 	// Test 2: Request with empty params object should also work
-	// This is the fix for https://github.com/pi-node/pi-rpc/issues/551
+	// This is the fix for https://github.com/Pi-Defi-world/suban-rpc/issues/551
 	emptyParamsRequest := `{
 "jsonrpc": "2.0",
 "id": 1,

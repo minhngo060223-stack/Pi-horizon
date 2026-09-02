@@ -17,7 +17,7 @@ import (
 	"github.com/stellar/go-stellar-sdk/toid"
 	"github.com/stellar/go-stellar-sdk/xdr"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/db"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/db"
 )
 
 type transactionsRPCHandler struct {

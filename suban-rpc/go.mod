@@ -1,6 +1,6 @@
 module github.com/Pi-Defi-world/suban-rpc
 
-go 1.25.9
+go 1.25.0
 
 require (
 	github.com/Masterminds/squirrel v1.5.4

@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
 )
 
 func TestArchiveUserAgent(t *testing.T) {

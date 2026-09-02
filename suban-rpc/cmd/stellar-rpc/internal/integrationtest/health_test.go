@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/config"
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/config"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
 )
 
 func TestHealth(t *testing.T) {

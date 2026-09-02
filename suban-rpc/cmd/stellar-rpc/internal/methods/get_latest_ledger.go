@@ -9,7 +9,7 @@ import (
 
 	protocol "github.com/stellar/go-stellar-sdk/protocols/rpc"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/db"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/db"
 )
 
 // NewGetLatestLedgerHandler returns a JSON RPC handler to retrieve the latest ledger entry from Stellar core.

@@ -8,9 +8,9 @@ import (
 	protocol "github.com/stellar/go-stellar-sdk/protocols/rpc"
 	"github.com/stellar/go-stellar-sdk/support/log"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/config"
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/daemon/interfaces"
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/db"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/config"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/daemon/interfaces"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/db"
 )
 
 func NewGetVersionInfoHandler(

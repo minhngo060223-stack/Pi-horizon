@@ -28,7 +28,7 @@ import (
 	"github.com/stellar/go-stellar-sdk/support/log"
 	"github.com/stellar/go-stellar-sdk/xdr"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/ledgerentries"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/ledgerentries"
 )
 
 type snapshotSourceHandle struct {

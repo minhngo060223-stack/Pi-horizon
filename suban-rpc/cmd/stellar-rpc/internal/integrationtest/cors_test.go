@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pi-node/pi-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/integrationtest/infrastructure"
 )
 
 // TestCORS ensures that we receive the correct CORS headers as a response to an HTTP request.

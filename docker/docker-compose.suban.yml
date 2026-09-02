@@ -1,24 +1,46 @@
 # Suban Data Platform
-# Runs Suban services connecting to existing pi-mainnet and pi-testnet nodes
+# Runs Suban services connecting to existing pi-mainnet node
 #
 # Architecture:
 #   Internet → Cloudflare → Cloudflared → Caddy → Suban Services → Pi Nodes
 #
 # Prerequisites:
 #   docker compose -f docker-compose.pi-mainnet-node.yml up -d
-#   testnet2 must be running (Pi Node's own container)
 #
 # Usage:
 #   docker compose -f docker-compose.suban.yml up -d --build
 #
 # Subdomains:
-#   rpc.suban.org      → Mainnet JSON-RPC (port 8003)
-#   testnet.suban.org  → Testnet Horizon API (port 8000)
+#   rpc.suban.org      → Mainnet JSON-RPC (suban-rpc)
+#   testnet.suban.org  → Testnet Horizon API (testnet2)
 #   oracle.suban.org   → Price oracle + on-chain analytics
-#   testrpc.suban.org  → Testnet JSON-RPC (port 8003)
+#   testrpc.suban.org  → Testnet JSON-RPC (suban-rpc testnet mode)
 #   horizon.suban.org  → Mainnet Horizon API
 
 services:
+  # ======================================================================
+  # SUBAN RPC - JSON-RPC for Pi Network smart contracts
+  # ======================================================================
+  suban-rpc:
+    build:
+      context: ../suban-rpc
+      dockerfile: Dockerfile
+    container_name: suban-rpc
+    restart: on-failure
+    environment:
+      - PORT=8000
+      - ADMIN_PORT=8001
+      - NETWORK_PASSPHRASE=Pi Network
+      - HISTORY_ARCHIVE_URLS=https://history.minepi.com
+      - PI_NODE_BINARY_PATH=/usr/bin/stellar-core
+      - CAPTIVE_CORE_CONFIG_PATH=/app/suban-core.cfg
+      - DB_PATH=/data/suban-rpc.sqlite
+      - LOG_LEVEL=info
+    volumes:
+      - suban-rpc-data:/data
+    networks:
+      - suban-net
+
   # ======================================================================
   # SUBAN API - Horizon wrapper with caching + rate limiting
   # ======================================================================
@@ -85,6 +107,7 @@ services:
     depends_on:
       - suban-api
       - suban-controller
+      - suban-rpc
     networks:
       - suban-net
 
@@ -106,6 +129,7 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  suban-rpc-data:
 
 networks:
   suban-net:
