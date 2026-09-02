@@ -1,87 +1,40 @@
-# Horizon API — runs both mainnet AND testnet simultaneously.
-# Mainnet on :8000, Testnet on :8001.
-# Each gets its own Postgres DB and captive core config.
+# Minimal Horizon-only compose — no standalone stellar-core needed.
+# Captive core runs inside the Horizon container.
+# Uses host networking so captive core can reach Pi validators via UDP overlay.
 services:
-  # ============== MAINNET ==============
-  horizon-postgres-mainnet:
+  horizon-postgres:
     platform: linux/amd64
     image: postgres:16-bookworm
     restart: on-failure
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_DB: horizon
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     volumes:
-      - horizon-db-mainnet:/var/lib/postgresql/data
+      - horizon-db-data:/var/lib/postgresql/data
 
-  horizon-mainnet:
+  horizon:
     platform: linux/amd64
     depends_on:
-      - horizon-postgres-mainnet
+      - horizon-postgres
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
       args:
-        STELLAR_CORE_VERSION: "23*"
+        STELLAR_CORE_VERSION: "27*"
     restart: on-failure
-    ports:
-      - "8002:8000"
+    network_mode: host
     volumes:
       - ./captive-core-mainnet.cfg:/captive-core-mainnet.cfg:ro
     environment:
       - NETWORK=pimainnet
-      - DATABASE_URL=postgres://postgres@horizon-postgres-mainnet:5432/horizon?sslmode=disable
-      - STELLAR_CORE_URL=http://localhost:11626
+      - DATABASE_URL=postgres://postgres@localhost:5432/horizon?sslmode=disable
       - CAPTIVE_CORE_CONFIG_PATH=/captive-core-mainnet.cfg
-      - STELLAR_CORE_VERSION=23*
       - INGEST=true
       - DISABLE_TX_SUB=true
       - PER_HOUR_RATE_LIMIT=0
     command: ["--apply-migrations"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  # ============== TESTNET ==============
-  horizon-postgres-testnet:
-    platform: linux/amd64
-    image: postgres:16-bookworm
-    restart: on-failure
-    environment:
-      POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_DB: horizon
-    expose:
-      - "5432"
-    volumes:
-      - horizon-db-testnet:/var/lib/postgresql/data
-
-  horizon-testnet:
-    platform: linux/amd64
-    depends_on:
-      - horizon-postgres-testnet
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dev
-      args:
-        STELLAR_CORE_VERSION: "23*"
-    restart: on-failure
-    ports:
-      - "8001:8000"
-    volumes:
-      - ./captive-core-testnet.cfg:/captive-core-testnet.cfg:ro
-    environment:
-      - NETWORK=pitestnet2
-      - DATABASE_URL=postgres://postgres@horizon-postgres-testnet:5432/horizon?sslmode=disable
-      - STELLAR_CORE_URL=http://localhost:11626
-      - CAPTIVE_CORE_CONFIG_PATH=/captive-core-testnet.cfg
-      - STELLAR_CORE_VERSION=23*
-      - INGEST=true
-      - DISABLE_TX_SUB=true
-      - PER_HOUR_RATE_LIMIT=0
-    command: ["--apply-migrations"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
 volumes:
-  horizon-db-mainnet:
-  horizon-db-testnet:
+  horizon-db-data:

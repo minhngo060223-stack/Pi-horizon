@@ -1,0 +1,38 @@
+# pi-rpc Configuration Example
+
+# The HTTP endpoint for the RPC server to listen on
+ENDPOINT = "localhost:8000"
+
+# The Admin endpoint (optional, set to "" to disable)
+# WARNING: This should not be accessible from the internet.
+ADMIN_ENDPOINT = "localhost:8001"
+
+# URL used to query the Pi Node (local instance by default)
+PI_NODE_URL = "http://localhost:11626"
+
+# Network passphrase for the Pi network
+# Commonly "Pi Network" or "Pi Testnet"
+NETWORK_PASSPHRASE = "Pi Network"
+
+# Path to the SQLite database file
+DB_PATH = "pi-rpc.sqlite"
+
+# Minimum log severity (debug, info, warn, error)
+LOG_LEVEL = "info"
+
+# Format used for output logs (json or text)
+LOG_FORMAT = "text"
+
+# --- Advanced Configuration ---
+
+# Path to Pi Node binary (required for captive core)
+# PI_NODE_BINARY_PATH = "/usr/bin/pi-node"
+
+# Path to additional configuration for the Pi Node used by captive core
+# CAPTIVE_CORE_CONFIG_PATH = "/etc/pi/pi-node.cfg"
+
+# Storage location for Captive Core bucket data
+# CAPTIVE_CORE_STORAGE_PATH = "./captive-core"
+
+# Comma-separated list of history archive URLs
+# HISTORY_ARCHIVE_URLS = ["https://history.mainnet.minepi.com"]

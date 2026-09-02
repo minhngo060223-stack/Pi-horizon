@@ -1,0 +1,34 @@
+{
+	auto_https off
+}
+
+:80 {
+	@horizon host horizon.suban.org
+	@rpc host rpc.suban.org
+	@testnet host testnet.suban.org
+	@testrpc host testrpc.suban.org
+	@oracle host oracle.suban.org
+
+	handle @horizon {
+		reverse_proxy pi-mainnet:8000
+	}
+
+	handle @rpc {
+		reverse_proxy pi-mainnet:8003
+	}
+
+	handle @testnet {
+		reverse_proxy testnet2:8000
+	}
+
+	handle @testrpc {
+		reverse_proxy testnet2:1570
+	}
+
+	handle @oracle {
+		reverse_proxy suban-controller:3000
+	}
+
+	# Default: Suban API
+	reverse_proxy suban-api:4000
+}

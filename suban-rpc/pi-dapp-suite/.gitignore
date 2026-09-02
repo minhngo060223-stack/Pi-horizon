@@ -1,0 +1,11 @@
+.env
+node_modules/
+dist/
+.next/
+.turbo/
+.DS_Store
+*.log
+contracts/target/
+contracts/**/target/
+contracts/**/Cargo.lock
+

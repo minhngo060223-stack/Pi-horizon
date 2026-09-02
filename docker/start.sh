@@ -39,8 +39,18 @@ case $NETWORK in
     echo "running on test network"
     ;;
 
+  pimainnet)
+    DOCKER_FLAGS="-f ${DOCKER_DIR}docker-compose.pi-full.yml"
+    echo "running Pi Mainnet (port 8000)"
+    ;;
+
+  dual)
+    DOCKER_FLAGS="-f ${DOCKER_DIR}docker-compose.pi-dual.yml"
+    echo "running Pi Mainnet (port 8000) + Pi Testnet (port 8001)"
+    ;;
+
   *)
-    echo  "$1 is not a supported option (use: standalone, pubnet, testnet, pitestnet1, pitestnet2)"
+    echo  "$1 is not a supported option (use: standalone, pubnet, testnet, pitestnet1, pitestnet2, pimainnet, dual)"
     exit 1
     ;;
 esac

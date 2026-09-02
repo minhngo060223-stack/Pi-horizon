@@ -17,6 +17,15 @@ Check out the following resources to get started:
 - [Quickstart Guide](https://github.com/stellar/quickstart): An external tool provided from a separate repository. It builds a docker image which can be used for running the stellar stack including Horizon locally for evaluation and testing situations. A great way to observe a reference runtime deployment, to see how everything fits together.
 - [Horizon Testing Guide](internal/docs/TESTING_NOTES.md): Details on how to test Horizon, including unit tests, integration tests, and end-to-end tests.
 
+### Pi Network API Services
+
+This project runs local Horizon API servers for Pi Network mainnet and testnet. See **[docker/API-DOCS.md](docker/API-DOCS.md)** for full documentation including endpoints, usage examples, and troubleshooting.
+
+| Service | Mainnet URL | Testnet URL | Browser? |
+|---------|-------------|-------------|----------|
+| Horizon API | `http://localhost:41401` | `http://localhost:31401` | Yes |
+| Stellar RPC | `http://localhost:41403` | `http://localhost:31403` | No (POST only) |
+
 ### Run a production server
 If you're an administrator planning to run a production instance of Horizon as part of the public Stellar network, you should check out the instructions on our public developer docs - [Run an API Server](https://developers.stellar.org/docs/run-api-server/). It covers installation, monitoring, error scenarios and more.
 

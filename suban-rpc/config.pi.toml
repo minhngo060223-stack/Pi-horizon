@@ -1,0 +1,20 @@
+# Suban RPC - Pi Network Configuration
+ENDPOINT = "0.0.0.0:8000"
+ADMIN_ENDPOINT = "0.0.0.0:8001"
+
+# Captive core lives in the same container and exposes HTTP locally.
+PI_NODE_URL = "http://localhost:11626"
+PI_NODE_BINARY_PATH = "/usr/bin/stellar-core"
+
+# Pi testnet settings.
+NETWORK_PASSPHRASE = "Pi Testnet"
+HISTORY_ARCHIVE_URLS = ["https://history.testnet2.minepi.com/"]
+
+# Captive core config mounted into container.
+CAPTIVE_CORE_CONFIG_PATH = "/app/suban-core.cfg"
+CAPTIVE_CORE_STORAGE_PATH = "/captive-core"
+
+# Store the RPC SQLite DB on a dedicated data mount.
+DB_PATH = "/data/suban-rpc.sqlite"
+LOG_LEVEL = "info"
+LOG_FORMAT = "text"

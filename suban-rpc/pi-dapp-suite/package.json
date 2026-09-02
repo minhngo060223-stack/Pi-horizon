@@ -1,0 +1,15 @@
+{
+  "name": "pi-dapp-suite",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "install:all": "pnpm -r install",
+    "dev:faucet": "pnpm --filter ./apps/faucet dev",
+    "dev:web": "pnpm --filter ./apps/web dev",
+    "dev": "pnpm run install:all && pnpm dlx concurrently -n faucet,web -c blue,green \"pnpm run dev:faucet\" \"pnpm run dev:web\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
+

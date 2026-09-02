@@ -1,0 +1,19 @@
+# Pi Testnet Node
+# Horizon API: http://localhost:31401 | Peer: 31402 | RPC: 31403
+services:
+  pi-testnet:
+    image: pinetwork/pi-node-docker:community-v1.0-p27.1.0
+    container_name: pi-testnet
+    restart: on-failure
+    ports:
+      - "31401:8000"
+      - "31402:31402"
+      - "31403:8003"
+    volumes:
+      - "pi-testnet-data:/opt/stellar"
+    environment:
+      - POSTGRES_PASSWORD=pi-testnet-pg
+    command: ["--testnet2"]
+
+volumes:
+  pi-testnet-data:
