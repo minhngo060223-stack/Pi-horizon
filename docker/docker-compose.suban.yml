@@ -118,7 +118,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: suban-cloudflared
     restart: unless-stopped
-    command: tunnel run
+    command: tunnel run --token ${TUNNEL_TOKEN}
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     depends_on:
