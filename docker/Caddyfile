@@ -10,11 +10,11 @@
 	@oracle host oracle.suban.org
 
 	handle @horizon {
-		reverse_proxy pi-mainnet:8000
+		reverse_proxy suban-api:4000
 	}
 
 	handle @rpc {
-		reverse_proxy suban-rpc:8000
+		reverse_proxy pi-mainnet:8003
 	}
 
 	handle @testnet {
@@ -22,7 +22,7 @@
 	}
 
 	handle @testrpc {
-		reverse_proxy suban-rpc:8000
+		reverse_proxy testnet2:1570
 	}
 
 	handle @oracle {
