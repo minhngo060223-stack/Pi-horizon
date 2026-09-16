@@ -111,7 +111,7 @@ services:
       - suban-net
 
   # ======================================================================
-  # CADDY - Internal reverse proxy
+  # CADDY - Internal reverse proxy + static frontend
   # ======================================================================
   caddy:
     image: caddy:2-alpine
@@ -119,6 +119,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../Suban/frontend/escrow-viewer/dist:/srv/suban:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

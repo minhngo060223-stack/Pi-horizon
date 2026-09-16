@@ -8,6 +8,8 @@
 	@testnet host testnet.suban.org
 	@testrpc host testrpc.suban.org
 	@oracle host oracle.suban.org
+	@main host suban.org
+	@www host www.suban.org
 
 	handle @horizon {
 		reverse_proxy suban-api:4000
@@ -27,6 +29,16 @@
 
 	handle @oracle {
 		reverse_proxy suban-controller:3000
+	}
+
+	handle @main {
+		root * /srv/suban
+		file_server
+	}
+
+	handle @www {
+		root * /srv/suban
+		file_server
 	}
 
 	# Default: Suban API
