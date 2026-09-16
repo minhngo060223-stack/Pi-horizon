@@ -4,7 +4,7 @@ ADMIN_ENDPOINT = "0.0.0.0:8001"
 
 # Network
 NETWORK_PASSPHRASE = "Pi Network"
-HISTORY_ARCHIVE_URLS = ["http://history.minepi.com"]
+HISTORY_ARCHIVE_URLS = ["https://history.mainnet.minepi.com"]
 
 # Pi Node / Captive Core
 PI_NODE_BINARY_PATH = "/usr/bin/stellar-core"
