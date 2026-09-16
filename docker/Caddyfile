@@ -14,7 +14,7 @@
 	}
 
 	handle @rpc {
-		reverse_proxy pi-mainnet:8003
+		reverse_proxy suban-rpc:8000
 	}
 
 	handle @testnet {
@@ -22,7 +22,7 @@
 	}
 
 	handle @testrpc {
-		reverse_proxy testnet2:1570
+		reverse_proxy suban-rpc-testnet:8000
 	}
 
 	handle @oracle {

@@ -27,17 +27,14 @@ services:
       dockerfile: Dockerfile
     container_name: suban-rpc
     restart: on-failure
+    expose:
+      - "8000"
+      - "8001"
     environment:
-      - PORT=8000
-      - ADMIN_PORT=8001
-      - NETWORK_PASSPHRASE=Pi Network
-      - HISTORY_ARCHIVE_URLS=http://history.minepi.com
-      - PI_NODE_BINARY_PATH=/usr/bin/stellar-core
-      - CAPTIVE_CORE_CONFIG_PATH=/app/suban-core.cfg
-      - DB_PATH=/data/suban-rpc.sqlite
-      - LOG_LEVEL=info
+      - PI_RPC_CONFIG_PATH=/config/suban-rpc.toml
     volumes:
       - suban-rpc-data:/data
+      - ./suban-rpc-mainnet.toml:/config/suban-rpc.toml:ro
     networks:
       - suban-net
 
@@ -50,17 +47,14 @@ services:
       dockerfile: Dockerfile
     container_name: suban-rpc-testnet
     restart: on-failure
+    expose:
+      - "8000"
+      - "8001"
     environment:
-      - PORT=8000
-      - ADMIN_PORT=8001
-      - NETWORK_PASSPHRASE=Pi Testnet
-      - HISTORY_ARCHIVE_URLS=http://history.testnet2.minepi.com/
-      - PI_NODE_BINARY_PATH=/usr/bin/stellar-core
-      - CAPTIVE_CORE_CONFIG_PATH=/app/suban-core-testnet.cfg
-      - DB_PATH=/data/suban-rpc-testnet.sqlite
-      - LOG_LEVEL=info
+      - PI_RPC_CONFIG_PATH=/config/suban-rpc.toml
     volumes:
       - suban-rpc-testnet-data:/data
+      - ./suban-rpc-testnet.toml:/config/suban-rpc.toml:ro
     networks:
       - suban-net
 

@@ -47,6 +47,7 @@ FROM pinetwork/pi-node-docker:community-v1.0-p27.1.0
 # Copy the built suban-rpc binary
 COPY --from=build /go/src/github.com/Pi-Defi-world/suban-rpc/suban-rpc /app/suban-rpc
 COPY --from=build /go/src/github.com/Pi-Defi-world/suban-rpc/suban-core.cfg /app/suban-core.cfg
+COPY --from=build /go/src/github.com/Pi-Defi-world/suban-rpc/suban-core-testnet.cfg /app/suban-core-testnet.cfg
 
 WORKDIR /app
 

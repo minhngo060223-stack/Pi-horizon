@@ -3,6 +3,7 @@ package daemon
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -273,6 +274,12 @@ func mustCreateHistoryArchive(cfg *config.Config, logger *supportlog.Entry) *his
 	if len(cfg.HistoryArchiveURLs) == 0 {
 		logger.Fatal("no history archives URLs were provided")
 	}
+
+	originalTransport := http.DefaultTransport
+	http.DefaultTransport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	defer func() { http.DefaultTransport = originalTransport }()
 
 	historyArchive, err := historyarchive.NewArchivePool(
 		cfg.HistoryArchiveURLs,
