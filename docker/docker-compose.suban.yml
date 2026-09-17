@@ -35,6 +35,7 @@ services:
     volumes:
       - suban-rpc-data:/data
       - ./suban-rpc-mainnet.toml:/config/suban-rpc.toml:ro
+      - ../suban-rpc/suban-core.cfg:/app/suban-core.cfg:ro
     networks:
       - suban-net
 
