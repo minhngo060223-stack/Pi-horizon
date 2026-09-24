@@ -15,6 +15,9 @@
 		reverse_proxy suban-api:4000
 	}
 
+	# Arc chain endpoints are served on horizon subdomain via /arc/*
+	# Also accessible directly via suban-api default route
+
 	handle @rpc {
 		reverse_proxy suban-rpc:8000
 	}
@@ -32,11 +35,34 @@
 	}
 
 	handle @main {
+		# API calls for escrow viewer go to suban-controller
+		@escrowApi path /api/escrow/* /api/gateway/*
+		handle @escrowApi {
+			reverse_proxy suban-controller:3000
+		}
+		# Escrow viewer page
+		@escrowPage path /escrow
+		handle @escrowPage {
+			rewrite * /escrow.html
+			root * /srv/suban
+			file_server
+		}
+		# Everything else is static files
 		root * /srv/suban
 		file_server
 	}
 
 	handle @www {
+		@escrowApi path /api/escrow/* /api/gateway/*
+		handle @escrowApi {
+			reverse_proxy suban-controller:3000
+		}
+		@escrowPage path /escrow
+		handle @escrowPage {
+			rewrite * /escrow.html
+			root * /srv/suban
+			file_server
+		}
 		root * /srv/suban
 		file_server
 	}

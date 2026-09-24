@@ -12,4 +12,9 @@ export const config = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
   cacheTTL: parseInt(process.env.CACHE_TTL_SECONDS || '5', 10),
+
+  // Arc RPC (EVM-compatible L1 by Circle)
+  arcRpcUrl: process.env.ARC_RPC_URL || '',
+  arcChainId: parseInt(process.env.ARC_CHAIN_ID || '0', 10),
+  arcNetworkName: process.env.ARC_NETWORK_NAME || 'Arc',
 };

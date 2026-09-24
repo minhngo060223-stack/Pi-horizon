@@ -1,8 +1,9 @@
 /**
  * Oracle Push Service
  * Pushes aggregated prices to the on-chain HubOracle contract.
+ * Uses Stellar JS SDK (no soroban CLI dependency).
  */
-import { execFileSync } from 'child_process';
+import { Horizon, Networks, Keypair, TransactionBuilder, Operation, Contract } from '@stellar/stellar-sdk';
 import { logger } from '../utils/logger';
 import { config } from '../config';
 import { AggregatedPrice } from '../types';
@@ -42,24 +43,33 @@ export class OraclePushService {
     }
 
     try {
+      const server = new Horizon.Server(this.rpcUrl);
+      const sourceKeypair = Keypair.fromSecret(this.adminSecret);
+      const sourceAccount = await server.loadAccount(sourceKeypair.publicKey());
+
       const priceScaled = Math.round(price.price_usd * 1e7);
       const confidence = Math.round(price.confidence_score * 100);
 
-      const args = [
-        'contract', 'invoke',
-        '--id', this.contractId,
-        '--rpc-url', this.rpcUrl,
-        '--network-passphrase', this.networkPassphrase,
-        '--source-account', this.adminSecret,
-        '--inclusion-fee', '1000000',
-        '--',
-        'set_price',
-        '--admin', this.adminSecret,
-        '--asset', this.contractId,
-        '--price', String(priceScaled),
-        '--decimals', '7',
-        '--confidence', String(confidence),
-      ];
+      const contract = new Contract(this.contractId);
+
+      const tx = new TransactionBuilder(sourceAccount, {
+        fee: '1000000',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(
+          contract.call(
+            'set_price',
+            Keypair.fromSecret(this.adminSecret).publicKey(),
+            this.contractId,
+            BigInt(priceScaled),
+            BigInt(7),
+            BigInt(confidence)
+          )
+        )
+        .setTimeout(30)
+        .build();
+
+      tx.sign(sourceKeypair);
 
       logger.debug('Pushing price to on-chain oracle', {
         price_usd: price.price_usd,
@@ -68,11 +78,7 @@ export class OraclePushService {
         sources: price.sources_used,
       });
 
-      execFileSync('soroban', args, {
-        timeout: 30000,
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
+      const result = await server.submitTransaction(tx);
 
       this.pushCount++;
       this.lastPushAt = new Date();
@@ -81,13 +87,14 @@ export class OraclePushService {
       logger.info('Price pushed to on-chain oracle', {
         price_usd: price.price_usd,
         push_count: this.pushCount,
+        hash: result.hash,
       });
 
       return true;
     } catch (error: any) {
-      this.lastPushError = error.message;
+      this.lastPushError = error.message || String(error);
       logger.error('Failed to push price to on-chain oracle', {
-        error: error.message,
+        error: error.message || String(error),
         price_usd: price.price_usd,
       });
       return false;

@@ -77,6 +77,9 @@ services:
       - RATE_LIMIT_MAX_REQUESTS=5000
       - CACHE_TTL_SECONDS=5
       - LOG_LEVEL=info
+      - ARC_RPC_URL=${ARC_RPC_URL:-}
+      - ARC_CHAIN_ID=${ARC_CHAIN_ID:-0}
+      - ARC_NETWORK_NAME=${ARC_NETWORK_NAME:-Arc}
     networks:
       - suban-net
 
@@ -108,6 +111,30 @@ services:
       - TX_STREAM_POLL_MS=5000
       - TX_STREAM_BUFFER_SIZE=100
       - LOG_LEVEL=info
+      - ARC_RPC_URL=${ARC_RPC_URL:-}
+      - ARC_PRICE_PAIR_ADDRESS=${ARC_PRICE_PAIR_ADDRESS:-}
+      - WEIGHT_ARC=${WEIGHT_ARC:-1.5}
+      - SOROBAN_RPC_MAINNET_URL=https://rpc.suban.org
+      - SOROBAN_RPC_TESTNET_URL=https://rpc.testnet.minepi.com
+    networks:
+      - suban-net
+
+  # ======================================================================
+  # EVENT INDEXER - Off-chain contract event indexer (SQLite)
+  # ======================================================================
+  event-indexer:
+    build:
+      context: ../Suban/services/event-indexer
+      dockerfile: Dockerfile
+    container_name: suban-event-indexer
+    restart: on-failure
+    environment:
+      - PI_SOROBAN_RPC_URL=http://suban-rpc:8000
+      - PI_NETWORK_PASSPHRASE=Pi Network
+      - INDEXER_DB_PATH=/data/events.db
+      - INDEXER_POLL_MS=10000
+    volumes:
+      - event-indexer-data:/data
     networks:
       - suban-net
 
@@ -150,6 +177,7 @@ volumes:
   caddy_config:
   suban-rpc-data:
   suban-rpc-testnet-data:
+  event-indexer-data:
 
 networks:
   suban-net:

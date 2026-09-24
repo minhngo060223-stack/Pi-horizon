@@ -5,6 +5,7 @@ import { config } from './config';
 import { logger } from './utils/logger';
 import { horizonRouter } from './routes/horizon';
 import { enhancedRouter } from './routes/enhanced';
+import { arcRouter } from './routes/arc';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -34,6 +35,9 @@ app.use((req, _res, next) => {
 // Enhanced API routes (cached)
 app.use('/api/v1', enhancedRouter);
 
+// Arc chain routes (EVM-compatible)
+app.use('/arc', arcRouter);
+
 // Raw Horizon proxy (for full API compatibility)
 app.use('/horizon', horizonRouter);
 
@@ -51,6 +55,9 @@ app.get('/', (_req, res) => {
       transaction: '/api/v1/transactions/:hash',
       ledgers: '/api/v1/ledgers',
       assets: '/api/v1/assets',
+      arcHealth: '/arc/health',
+      arcBlockNumber: '/arc/block-number',
+      arcRpc: '/arc/rpc',
       horizon: '/horizon/*',
     },
   });
