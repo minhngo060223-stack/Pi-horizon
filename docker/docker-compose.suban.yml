@@ -120,7 +120,7 @@ services:
       - suban-net
 
   # ======================================================================
-  # EVENT INDEXER - Off-chain contract event indexer (SQLite)
+  # EVENT INDEXER - Off-chain contract event indexer (SQLite + HTTP API)
   # ======================================================================
   event-indexer:
     build:
@@ -128,11 +128,14 @@ services:
       dockerfile: Dockerfile
     container_name: suban-event-indexer
     restart: on-failure
+    expose:
+      - "3002"
     environment:
       - PI_SOROBAN_RPC_URL=http://suban-rpc:8000
       - PI_NETWORK_PASSPHRASE=Pi Network
       - INDEXER_DB_PATH=/data/events.db
       - INDEXER_POLL_MS=10000
+      - INDEXER_API_PORT=3002
     volumes:
       - event-indexer-data:/data
     networks:
