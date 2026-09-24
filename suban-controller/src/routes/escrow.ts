@@ -1,65 +1,48 @@
 /**
  * Escrow API routes - backend for the Escrow Viewer React app
- * Queries Horizon and Soroban RPC for escrow contract data.
+ * Queries Horizon for escrow contract data.
  */
 import { Router, Request, Response } from 'express';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import axios from 'axios';
-import { rpc } from '@stellar/stellar-sdk';
 
-const router = Router();
+const router: Router = Router();
 
 function getHorizonUrl(): string {
   return config.network === 'testnet' ? config.horizon.testnet : config.horizon.mainnet;
 }
 
-function getRpcUrl(): string {
-  return config.network === 'testnet'
-    ? (process.env.SOROBAN_RPC_TESTNET_URL || 'https://rpc.testnet.minepi.com')
-    : (process.env.SOROBAN_RPC_MAINNET_URL || 'https://rpc.suban.org');
-}
-
 /**
  * GET /api/escrow/:escrowId
- * Get escrow contract state from Soroban RPC
+ * Get escrow contract state from Horizon
  */
-router.get('/:escrowId', async (req: Request, res: Response) => {
+router.get('/escrow/:escrowId', async (req: Request, res: Response) => {
   try {
     const { escrowId } = req.params;
-    const rpcUrl = getRpcUrl();
-    const server = new rpc.Server(rpcUrl);
+    const horizonUrl = getHorizonUrl();
 
-    // Try to get the contract data
+    // Try to get account data from Horizon
     try {
-      const ledgerKey = rpc.LedgerKey.contractData({
-        contractId: escrowId,
-        key: rpc.xdr.LedgerKey.scsvStaticSym([
-          rpc.xdr.ScSymbol.scSymbol('Escrow'),
-        ]),
+      const response = await axios.get(`${horizonUrl}/accounts/${escrowId}`, { timeout: 10000 });
+      const account = response.data;
+
+      res.json({
+        escrowId,
+        status: 'active',
+        funder: account.source_account || '',
+        receiver: '',
+        totalDeposited: account.balances?.find((b: any) => b.asset_type === 'native')?.balance || '0',
+        totalReleased: '0',
+        milestones: [],
+        sequence: account.sequence,
+        subentry_count: account.subentry_count,
       });
-
-      const response = await server.getLedgerEntries([ledgerKey]);
-      const entry = response.entries?.[0];
-
-      if (entry) {
-        const contractData = entry.val.contractData();
-        const data = contractData.val();
-        // Try to decode as a struct with status, funder, receiver, milestones
-        res.json({
-          escrowId,
-          status: 'active',
-          funder: '',
-          receiver: '',
-          totalDeposited: '0',
-          totalReleased: '0',
-          milestones: [],
-          raw: data.toXDR('base64'),
-        });
-        return;
+      return;
+    } catch (e: any) {
+      if (e.response?.status !== 404) {
+        logger.warn('Horizon account lookup failed for escrow', { escrowId, error: e.message });
       }
-    } catch (e) {
-      // Contract data not found or decode error
     }
 
     // Fallback: return basic info
@@ -89,7 +72,6 @@ router.get('/:escrowId', async (req: Request, res: Response) => {
  */
 router.get('/gateway/events', async (req: Request, res: Response) => {
   try {
-    const contract = req.query.contract as string || 'escrow';
     const limit = parseInt(req.query.limit as string) || 50;
     const horizonUrl = getHorizonUrl();
 

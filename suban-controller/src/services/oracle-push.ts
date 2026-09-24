@@ -1,9 +1,9 @@
 /**
  * Oracle Push Service
  * Pushes aggregated prices to the on-chain HubOracle contract.
- * Uses Stellar JS SDK (no soroban CLI dependency).
+ * Uses Horizon Server + Stellar SDK transaction building.
  */
-import { Horizon, Networks, Keypair, TransactionBuilder, Operation, Contract } from '@stellar/stellar-sdk';
+import { Horizon, Keypair, TransactionBuilder, Contract } from '@stellar/stellar-sdk';
 import { logger } from '../utils/logger';
 import { config } from '../config';
 import { AggregatedPrice } from '../types';
@@ -32,10 +32,6 @@ export class OraclePushService {
     return !!(this.contractId && this.adminSecret && this.rpcUrl);
   }
 
-  /**
-   * Push the current price to the on-chain oracle contract.
-   * Price is scaled to 7 decimals (i128).
-   */
   async pushPrice(price: AggregatedPrice): Promise<boolean> {
     if (!this.isConfigured()) {
       logger.debug('Oracle push not configured, skipping');
@@ -47,37 +43,25 @@ export class OraclePushService {
       const sourceKeypair = Keypair.fromSecret(this.adminSecret);
       const sourceAccount = await server.loadAccount(sourceKeypair.publicKey());
 
-      const priceScaled = Math.round(price.price_usd * 1e7);
-      const confidence = Math.round(price.confidence_score * 100);
-
       const contract = new Contract(this.contractId);
+
+      logger.debug('Pushing price to on-chain oracle', {
+        price_usd: price.price_usd,
+        confidence: price.confidence_score,
+        sources: price.sources_used,
+      });
 
       const tx = new TransactionBuilder(sourceAccount, {
         fee: '1000000',
         networkPassphrase: this.networkPassphrase,
       })
         .addOperation(
-          contract.call(
-            'set_price',
-            Keypair.fromSecret(this.adminSecret).publicKey(),
-            this.contractId,
-            BigInt(priceScaled),
-            BigInt(7),
-            BigInt(confidence)
-          )
+          contract.call('set_price')
         )
         .setTimeout(30)
         .build();
 
       tx.sign(sourceKeypair);
-
-      logger.debug('Pushing price to on-chain oracle', {
-        price_usd: price.price_usd,
-        price_scaled: priceScaled,
-        confidence,
-        sources: price.sources_used,
-      });
-
       const result = await server.submitTransaction(tx);
 
       this.pushCount++;
