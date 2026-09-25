@@ -142,6 +142,38 @@ services:
       - suban-net
 
   # ======================================================================
+  # BRIDGE RELAYER - Cross-chain PUSD bridge relayer (Stellar ↔ Arc)
+  # ======================================================================
+  bridge-relayer:
+    build:
+      context: ../Suban/services/bridge-relayer
+      dockerfile: docker/Dockerfile
+    container_name: suban-bridge-relayer
+    restart: on-failure
+    environment:
+      - STELLAR_RPC_URL=http://suban-rpc:8000
+      - STELLAR_HORIZON_URL=http://suban-api:4000
+      - STELLAR_NETWORK_PASSPHRASE=Pi Network
+      - STELLAR_BRIDGE_CONTRACT=${STELLAR_BRIDGE_CONTRACT:-}
+      - STELLAR_PUSD_TOKEN=${STELLAR_PUSD_TOKEN:-}
+      - ARC_RPC_URL=${ARC_RPC_URL:-https://rpc.testnet.arc.io}
+      - ARC_CHAIN_ID=${ARC_CHAIN_ID:-5042002}
+      - ARC_BRIDGE_CONTRACT=${ARC_BRIDGE_CONTRACT:-}
+      - ARC_PUSD_TOKEN=${ARC_PUSD_TOKEN:-}
+      - STELLAR_SIGNER_SECRET=${STELLAR_SIGNER_SECRET:-}
+      - EVM_SIGNER_PRIVATE_KEY=${EVM_SIGNER_PRIVATE_KEY:-}
+      - BRIDGE_FEE_PERCENTAGE=${BRIDGE_FEE_PERCENTAGE:-0.5}
+      - BRIDGE_MINIMUM_FEE=${BRIDGE_MINIMUM_FEE:-1}
+      - BRIDGE_PROTOCOL_SHARE=${BRIDGE_PROTOCOL_SHARE:-0.1}
+      - CIRCUIT_BREAKER_MAX_VOLUME=${CIRCUIT_BREAKER_MAX_VOLUME:-1000000}
+      - CIRCUIT_BREAKER_AUTO_PAUSE=${CIRCUIT_BREAKER_AUTO_PAUSE:-true}
+      - STELLAR_POLL_INTERVAL=${STELLAR_POLL_INTERVAL:-5000}
+      - ARC_POLL_INTERVAL=${ARC_POLL_INTERVAL:-2000}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    networks:
+      - suban-net
+
+  # ======================================================================
   # CADDY - Internal reverse proxy + static frontend
   # ======================================================================
   caddy:
