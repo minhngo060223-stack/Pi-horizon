@@ -1,6 +1,6 @@
 # Suban Data Platform
 
-A comprehensive data platform for the Pi Network, providing blockchain APIs, price feeds, and on-chain analytics.
+A comprehensive data platform for the Pi Network, providing blockchain APIs, price feeds, on-chain analytics, and **cross-chain PUSD stablecoin bridging** to Arc (Circle's EVM L1).
 
 **Website:** https://suban.org
 
@@ -22,17 +22,17 @@ A comprehensive data platform for the Pi Network, providing blockchain APIs, pri
             ┌───────────────┼───────────────┐
             │               │               │
     ┌───────┴───────┐ ┌────┴────┐ ┌────────┴────────┐
-    │   Suban API   │ │ Suban   │ │  Suban          │
-    │   :4000       │ │ Oracle  │ │  Controller     │
-    │               │ │ :3000   │ │  (Price+Chain)  │
+    │   Suban API   │ │ Suban   │ │  Bridge         │
+    │   :4000       │ │ Oracle  │ │  Relayer        │
+    │               │ │ :3000   │ │  (Stellar↔Arc)  │
     └───────┬───────┘ └────┬────┘ └────────┬────────┘
             │               │               │
             └───────┬───────┘               │
                     │                       │
             ┌───────┴───────┐       ┌───────┴───────┐
-            │  Pi Mainnet   │       │  Exchanges    │
-            │  Horizon      │       │  MEXC/CG/OKX  │
-            │  :41401       │       │  Bitget       │
+            │  Pi Network   │       │  Arc (EVM)    │
+            │  Horizon      │       │  PUSD Token   │
+            │  :41401       │       │  ArcBridge    │
             └───────────────┘       └───────────────┘
 ```
 
@@ -46,6 +46,8 @@ A comprehensive data platform for the Pi Network, providing blockchain APIs, pri
 | **Pi RPC (Testnet)** | 31403 | testrpc.suban.org | Testnet JSON-RPC |
 | **Suban Controller** | 3000 | oracle.suban.org | Price oracle (MEXC, CoinGecko, OKX, Bitget) + on-chain analytics |
 | **Suban API** | 4000 | - | Horizon wrapper with caching, rate limiting, enhanced endpoints |
+| **Bridge Relayer** | - | - | Cross-chain PUSD bridge (Stellar ↔ Arc) |
+| **Event Indexer** | 3002 | - | On-chain event indexer (SQLite + HTTP API) |
 | **Caddy** | 80/443 | *.suban.org | Internal reverse proxy |
 | **Cloudflared** | - | - | Cloudflare tunnel (exposes to internet) |
 
@@ -77,6 +79,9 @@ curl http://localhost:3000/api/v1/price
 
 # Test Horizon proxy
 curl http://localhost:4000/api/v1/summary
+
+# Test Bridge Relayer
+docker logs suban-bridge-relayer --tail 50
 ```
 
 ## API Endpoints
@@ -130,6 +135,47 @@ curl -X POST http://localhost:8000/ \
 
 **Note:** RPC uses POST requests only. Does not work in browsers.
 
+## Cross-Chain PUSD Bridge
+
+### Overview
+
+PUSD is a USD-pegged stablecoin bridged between Pi Network (Stellar) and Arc (Circle's EVM L1).
+
+### Deployed Contracts
+
+| Chain | Contract | Address |
+|-------|----------|---------|
+| **Pi Testnet** | Bridge Burn-Mint v2 | `CAM33E3NNPHO5OGNU6YVMUJYIVFLHDCRB7P3IXET4EDZHYVYM2JAX54S` |
+| **Pi Testnet** | PUSD Token | `CAPDFYOFXSQTVCZ7KPUACHVNMOO3TWLSLHTPQ3H64EBJVRFMAWIBEUAY` |
+| **Arc Testnet** | ArcBridge | `0x765c4AdF71CFA7f1e9F6358Ca25A8216DC70B409` |
+| **Arc Testnet** | PUSDToken (ERC-20) | `0x7534400f6F725326D5668d85d76b7bA0029aFEd8` |
+
+### Bridge Flow (E2E Verified)
+
+```
+User (Pi Testnet)                    Relayer                    Arc Testnet
+      │                                │                           │
+      │── burn_pusd(100 PUSD) ────────>│                           │
+      │   (PUSD locked in bridge)      │                           │
+      │                                │── Detect burn event ─────>│
+      │                                │── Calculate 1% fee ──────>│
+      │                                │── Sign cross-chain msg ──>│
+      │                                │── mintPusd(99 PUSD) ─────>│
+      │                                │   ✓ TX confirmed!        │
+      │<──── 99 PUSD on Arc ──────────│                           │
+```
+
+**Verified TX:** `0x305e6f4881956134cecbce76f174d29f900f1a1e78e5e037e6753527b3cd4e4d`
+
+### Configuration
+
+```bash
+# Bridge fee: 1% (90% relayer / 10% protocol)
+# Minimum fee: 1 PUSD
+# Circuit breaker: 1,000,000 PUSD per window
+# Polling: Stellar 5s, Arc 2s
+```
+
 ## Domain Configuration
 
 ### Cloudflared Tunnel (Recommended)
@@ -146,9 +192,12 @@ docker run -d --name cloudflared \
 
 ### DNS Records (Cloudflare)
 Create CNAME records pointing to your tunnel:
-- `api.suban.org` → `<tunnel-id>.cfargotunnel.com`
-- `oracle.suban.org` → `<tunnel-id>.cfargotunnel.com`
+- `suban.org` → `<tunnel-id>.cfargotunnel.com`
+- `www.suban.org` → `<tunnel-id>.cfargotunnel.com`
 - `rpc.suban.org` → `<tunnel-id>.cfargotunnel.com`
+- `testnet.suban.org` → `<tunnel-id>.cfargotunnel.com`
+- `testrpc.suban.org` → `<tunnel-id>.cfargotunnel.com`
+- `oracle.suban.org` → `<tunnel-id>.cfargotunnel.com`
 - `horizon.suban.org` → `<tunnel-id>.cfargotunnel.com`
 
 ### Direct Access (without Cloudflare)
@@ -180,6 +229,35 @@ HORIZON_URL=http://pi-mainnet:8000
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
 CACHE_TTL_SECONDS=5
+```
+
+### Bridge Relayer (.env)
+```bash
+# Stellar/Pi Testnet
+STELLAR_RPC_URL=https://rpc.testnet.minepi.com
+STELLAR_HORIZON_URL=https://api.testnet.minepi.com
+STELLAR_NETWORK_PASSPHRASE=Pi Testnet
+STELLAR_BRIDGE_CONTRACT=CAM33E3NNPHO5OGNU6YVMUJYIVFLHDCRB7P3IXET4EDZHYVYM2JAX54S
+STELLAR_PUSD_TOKEN=CAPDFYOFXSQTVCZ7KPUACHVNMOO3TWLSLHTPQ3H64EBJVRFMAWIBEUAY
+
+# Arc Testnet
+ARC_RPC_URL=https://rpc.testnet.arc.io
+ARC_CHAIN_ID=5042002
+ARC_BRIDGE_CONTRACT=0x765c4AdF71CFA7f1e9F6358Ca25A8216DC70B409
+ARC_PUSD_TOKEN=0x7534400f6F725326D5668d85d76b7bA0029aFEd8
+
+# Fee Configuration
+BRIDGE_FEE_PERCENTAGE=0.5
+BRIDGE_MINIMUM_FEE=1
+BRIDGE_PROTOCOL_SHARE=0.1
+
+# Circuit Breaker
+CIRCUIT_BREAKER_MAX_VOLUME=1000000
+CIRCUIT_BREAKER_AUTO_PAUSE=true
+
+# Polling Intervals (ms)
+STELLAR_POLL_INTERVAL=5000
+ARC_POLL_INTERVAL=2000
 ```
 
 ## Price Sources
@@ -227,11 +305,40 @@ Pi-horizon/
 ├── Suban-api/              # Horizon API wrapper (Node.js)
 ├── suban-controller/       # Data oracle (Node.js)
 ├── suban-rpc/              # JSON-RPC server (Go+Rust)
+├── Suban/                  # Smart contracts + relayer (submodule)
+│   ├── contracts/
+│   │   ├── arc-bridge/     # Arc/EVM contracts (Solidity)
+│   │   ├── bridge-burn-mint/  # Stellar bridge (Rust/Soroban)
+│   │   ├── pusd-token/     # PUSD stablecoin
+│   │   ├── wpi-token/      # Wrapped Pi
+│   │   └── ...             # 20+ more contracts
+│   └── services/
+│       ├── bridge-relayer/ # Cross-chain bridge relayer
+│       └── event-indexer/  # On-chain event indexer
 ├── docker/
 │   ├── docker-compose.suban.yml   # Full Suban stack
 │   ├── docker-compose.pi-mainnet-node.yml
 │   ├── Caddyfile                  # Reverse proxy config
 │   └── cloudflared/               # Cloudflare tunnel config
+├── docs/
+│   ├── PROJECT-REPORT.md    # Comprehensive project report
+│   └── API-REFERENCE.md     # API documentation
 ├── pi-rpc/                 # Original RPC (source for suban-rpc)
 └── Zyrachain-oracle-nodejs/ # Original oracle (source for suban-controller)
 ```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [PROJECT-REPORT.md](docs/PROJECT-REPORT.md) | Comprehensive project report |
+| [API-REFERENCE.md](docs/API-REFERENCE.md) | Complete API documentation |
+| [SUBAN.md](SUBAN.md) | This file - Architecture overview |
+| [DEVELOPER.md](Suban/docs/DEVELOPER.md) | Suban protocol developer docs |
+| [PHASE2-BRIDGE-DESIGN.md](Suban/docs/PHASE2-BRIDGE-DESIGN.md) | Bridge architecture design |
+| [INCIDENT-RUNBOOK.md](Suban/docs/INCIDENT-RUNBOOK.md) | Incident response procedures |
+| [AUDIT-PROGRAM.md](Suban/docs/AUDIT-PROGRAM.md) | Security audit program |
+
+## License
+
+MIT
