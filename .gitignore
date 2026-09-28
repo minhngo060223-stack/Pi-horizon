@@ -1,5 +1,5 @@
 .DS_Store
-internal/docs/public
+/internal/docs/public
 /.env
 /.go
 /tmp/
@@ -9,6 +9,11 @@ internal/docs/public
 *.bts
 *.swp
 *.swo
+/temp/
+node_modules/
+target/
+*.db
+*.lock
 
 /tls/*.crt
 /tls/*.key
