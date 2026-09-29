@@ -2,7 +2,7 @@
 # Mainnet Horizon API: port 41401 | Peer: 41402 | RPC: 41403
 services:
   pi-mainnet:
-    image: pinetwork/pi-node-docker:community-v1.0-p27.1.0
+    image: pinetwork/pi-node-docker:community-v1.0-p28.0.1
     container_name: pi-mainnet
     restart: on-failure
     ports:
