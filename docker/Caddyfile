@@ -27,7 +27,7 @@
 	}
 
 	handle @testrpc {
-		reverse_proxy suban-rpc-testnet:8000
+		reverse_proxy stellar-rpc-testnet:8000
 	}
 
 	handle @oracle {

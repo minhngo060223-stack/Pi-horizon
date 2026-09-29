@@ -14,7 +14,7 @@
 #   rpc.suban.org      → Mainnet JSON-RPC (suban-rpc)
 #   testnet.suban.org  → Testnet Horizon API (testnet2)
 #   oracle.suban.org   → Price oracle + on-chain analytics
-#   testrpc.suban.org  → Testnet JSON-RPC (suban-rpc testnet mode)
+#   testrpc.suban.org  → Testnet JSON-RPC (official stellar-rpc-testnet)
 #   horizon.suban.org  → Mainnet Horizon API
 
 services:
