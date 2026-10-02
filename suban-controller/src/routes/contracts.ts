@@ -246,4 +246,99 @@ router.get('/contracts/:contractId', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/contracts/:contractId/state
+ * Read contract storage without needing to hand-encode a LedgerKey.
+ *
+ *   ?key=NAME            symbol-keyed storage entry (e.g. name, symbol, decimals)
+ *   (key omitted)        the contract instance storage entry
+ *   ?durability=persistent|temporary   contract data durability class
+ *
+ * The RPC's getLedgerEntries accepts shorthand ledger keys, so the XDR encoding
+ * (including Pi's Durability field, which upstream SDKs do not carry) stays on
+ * the RPC where the schema is guaranteed to match.
+ */
+router.get('/contracts/:contractId/state', async (req: Request, res: Response) => {
+  const network = resolveNetwork(req);
+  const contractId = (req.params.contractId || '').trim().toUpperCase();
+
+  if (!/^C[A-Z2-7]{55}$/.test(contractId)) {
+    res.status(400).json({
+      error: 'Invalid contract ID',
+      message: 'A Stellar contract ID is a C followed by 55 base32 characters.',
+    });
+    return;
+  }
+
+  const rawDurability = typeof req.query.durability === 'string' ? req.query.durability.trim() : '';
+  if (rawDurability && rawDurability !== 'persistent' && rawDurability !== 'temporary') {
+    res.status(400).json({
+      error: 'Invalid durability',
+      message: 'durability must be persistent or temporary',
+    });
+    return;
+  }
+  const rawKey = typeof req.query.key === 'string' ? req.query.key.trim() : '';
+  if (rawKey && !/^[A-Za-z0-9_]{1,32}$/.test(rawKey)) {
+    res.status(400).json({
+      error: 'Invalid storage key',
+      message: 'key must be 1-32 characters of letters, digits or underscore (a Soroban symbol)',
+    });
+    return;
+  }
+
+  const durability = rawDurability || 'persistent';
+
+  // Shorthand ledger keys require suban-rpc. The official stellar-rpc image
+  // accepts only raw base64 XDR ledger keys, so encoding is left to the caller
+  // there rather than silently returning a misleading empty result.
+  const ledgerKey = rawKey
+    ? `contractDataSymbol:${contractId}:${rawKey}:${durability}`
+    : `contract:${contractId}:${durability}`;
+
+  try {
+    const result = await rpc(network, 'getLedgerEntries', { keys: [ledgerKey], format: 'json' });
+    const entries: any[] = result?.entries ?? [];
+
+    if (entries.length === 0) {
+      res.json({
+        network,
+        contractId,
+        storageKey: rawKey || null,
+        durability,
+        found: false,
+        note: 'No entry for this storage key at the RPC retention boundary. The contract may exist without this key.',
+      });
+      return;
+    }
+
+    const entry = entries[0];
+    res.json({
+      network,
+      contractId,
+      storageKey: rawKey || null,
+      durability,
+      found: true,
+      valueXdr: entry.xdr ?? null,
+      extXdr: entry.extXdr ?? null,
+      lastModifiedLedgerSeq: entry.lastModifiedLedgerSeq ?? null,
+      liveUntilLedgerSeq: entry.liveUntilLedgerSeq ?? null,
+      note: 'valueXdr is the raw base64 LedgerEntryData. Decode it with the Stellar SDK for a typed value.',
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    if (/cannot unmarshal key value/.test(message)) {
+      res.status(501).json({
+        error: 'Shorthand ledger keys not supported by this RPC',
+        message:
+          'This network RPC only accepts raw base64 XDR ledger keys. Use suban-rpc, or supply a pre-encoded ledgerKey.',
+        network,
+      });
+      return;
+    }
+    logger.error('Contract state read failed', { error: message, network, contractId, rawKey });
+    res.status(502).json({ error: 'Contract state unavailable', message });
+  }
+});
+
 export { router as contractsRouter };

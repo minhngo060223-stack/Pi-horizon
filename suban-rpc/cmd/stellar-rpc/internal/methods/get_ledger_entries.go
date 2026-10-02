@@ -14,6 +14,7 @@ import (
 	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/daemon/interfaces"
 	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/db"
 	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/ledgerentries"
+	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/ledgerkey"
 	"github.com/Pi-Defi-world/suban-rpc/cmd/stellar-rpc/internal/xdr2json"
 )
 
@@ -53,9 +54,7 @@ func newGetLedgerEntriesHandlerFromGetter(
 		}
 		var ledgerKeys []xdr.LedgerKey
 		for i, requestKey := range request.Keys {
-			var ledgerKey xdr.LedgerKey
-
-			err := xdr.SafeUnmarshalBase64WithOptions(requestKey, &ledgerKey, decodeOptions)
+			ledgerKey, err := ledgerkey.Parse(requestKey, decodeOptions)
 			if err != nil {
 				logger.WithError(err).WithField("request", request).
 					Infof("could not unmarshal requestKey %s at index %d from getLedgerEntries request", requestKey, i)
