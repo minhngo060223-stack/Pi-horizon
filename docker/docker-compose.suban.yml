@@ -34,6 +34,7 @@ services:
       - PI_RPC_CONFIG_PATH=/config/suban-rpc.toml
     volumes:
       - suban-rpc-data:/data
+      - suban-rpc-captive-core:/captive-core
       - ./suban-rpc-mainnet.toml:/config/suban-rpc.toml:ro
       - ../suban-rpc/suban-core.cfg:/app/suban-core.cfg:ro
     networks:
@@ -55,7 +56,9 @@ services:
       - PI_RPC_CONFIG_PATH=/config/suban-rpc.toml
     volumes:
       - suban-rpc-testnet-data:/data
+      - suban-rpc-testnet-captive-core:/captive-core
       - ./suban-rpc-testnet.toml:/config/suban-rpc.toml:ro
+      - ./suban-core-testnet.cfg:/app/suban-core-testnet.cfg:ro
     networks:
       - suban-net
 
@@ -66,13 +69,13 @@ services:
     image: stellar/stellar-rpc:latest
     container_name: stellar-rpc-testnet
     restart: on-failure
-    command: --captive-core-config-path /config/captive-core.cfg --stellar-core-url http://testnet2:11626
+    command: --captive-core-config-path /config/captive-core.cfg
     expose:
       - "8000"
     environment:
       - ENDPOINT=0.0.0.0:8000
       - NETWORK_PASSPHRASE=Pi Testnet
-      - HISTORY_ARCHIVE_URLS=https://history.testnet2.minepi.com/
+      - HISTORY_ARCHIVE_URLS=https://history.testnet.minepi.com/
       - CHECKPOINT_FREQUENCY=64
       - DB_PATH=/data/stellar-rpc-testnet.sqlite
       - LOG_LEVEL=info
@@ -120,7 +123,7 @@ services:
       - NODE_ENV=production
       - NETWORK=mainnet
       - HORIZON_MAINNET_URL=http://pi-mainnet:8000
-      - HORIZON_TESTNET_URL=http://testnet2:8000
+      - HORIZON_TESTNET_URL=http://pi-testnet:8000
       - CACHE_TTL_SECONDS=10
       - CHAIN_DATA_CACHE_TTL=30
       - OUTLIER_THRESHOLD_PERCENT=10
@@ -218,7 +221,9 @@ volumes:
   caddy_data:
   caddy_config:
   suban-rpc-data:
+  suban-rpc-captive-core:
   suban-rpc-testnet-data:
+  suban-rpc-testnet-captive-core:
   stellar-rpc-testnet-data:
   event-indexer-data:
 

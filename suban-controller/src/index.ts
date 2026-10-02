@@ -13,6 +13,7 @@ import { createChainDataRouter } from './routes/chaindata';
 import { createRealtimeRouter } from './routes/realtime';
 import { TransactionStreamer } from './services/transactionStreamer';
 import { escrowRouter } from './routes/escrow';
+import { contractsRouter } from './routes/contracts';
 
 // Import all price sources
 import { CoinGeckoSource } from './sources/coingecko';
@@ -127,6 +128,9 @@ async function main() {
 
   // Escrow API - backend for escrow viewer
   app.use('/api', escrowRouter);
+
+  // Contract search - derived from recent effects (no contract index in Horizon)
+  app.use('/api', contractsRouter);
 
   // Root endpoint
   app.get('/', (_req, res) => {

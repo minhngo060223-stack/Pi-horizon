@@ -23,7 +23,7 @@
 	}
 
 	handle @testnet {
-		reverse_proxy testnet2:8000
+		reverse_proxy pi-testnet:8000
 	}
 
 	handle @testrpc {
@@ -36,7 +36,7 @@
 
 	handle @main {
 		# API calls for escrow viewer go to suban-controller
-		@escrowApi path /api/escrow/* /api/gateway/*
+		@escrowApi path /api/escrow/* /api/gateway/* /api/contracts*
 		handle @escrowApi {
 			reverse_proxy suban-controller:3000
 		}
@@ -53,7 +53,7 @@
 	}
 
 	handle @www {
-		@escrowApi path /api/escrow/* /api/gateway/*
+		@escrowApi path /api/escrow/* /api/gateway/* /api/contracts*
 		handle @escrowApi {
 			reverse_proxy suban-controller:3000
 		}

@@ -17,3 +17,8 @@ DB_PATH = "/data/suban-rpc.sqlite"
 # Logging
 LOG_LEVEL = "info"
 LOG_FORMAT = "text"
+
+# Health check
+# Pi closes a ledger every ~5s. The 30s default trips intermittently while the
+# ingester batches writes, which makes getHealth report a false "syncing" state.
+MAX_HEALTHY_LEDGER_LATENCY = "5m"
