@@ -1,11 +1,13 @@
 /**
- * Contract search routes.
+ * Contract search routes, backed by the Soroban JSON-RPC.
  *
- * This Pi Horizon build exposes no contract-state endpoints (/contracts/:id 404s,
- * /accounts/:contractId 400s) and silently ignores the effects type and contract
- * filters. Contract discovery therefore has to be built by paging the effects
- * ledger and grouping client-side. Scans are bounded and cached because the yield
- * is low relative to the number of pages.
+ * Contract reads belong on the RPC: getEvents is the standard interface and
+ * returns contractId, ledger, txHash, topic and value. Horizon in this Pi build
+ * exposes no contract-state routes, so it is not used for contract data here.
+ *
+ * Note on filters: getEvents applies the contractId filter, but when a contract
+ * has no events in the requested range this build returns unfiltered results.
+ * Callers must verify returned contractIds match what they asked for.
  */
 import { Router, Request, Response } from 'express';
 import { logger } from '../utils/logger';
@@ -15,26 +17,42 @@ const router: Router = Router();
 
 type Network = 'mainnet' | 'testnet';
 
-const HORIZON_URLS: Record<Network, string> = {
-  mainnet: process.env.HORIZON_MAINNET_URL || 'http://pi-mainnet:8000',
-  testnet: process.env.HORIZON_TESTNET_URL || 'http://pi-testnet:8000',
+const RPC_URLS: Record<Network, string> = {
+  mainnet: process.env.CONTRACT_RPC_MAINNET_URL || 'http://suban-rpc:8000',
+  testnet: process.env.CONTRACT_RPC_TESTNET_URL || 'http://stellar-rpc-testnet:8000',
 };
 
-const PAGE_SIZE = 200;
-const MAX_PAGES = 10;
+const PAGE_SIZE = 100;
+const MAX_PAGES = 5;
 const CACHE_TTL_MS = 60_000;
+
+interface RpcEvent {
+  type?: string;
+  ledger?: number;
+  ledgerClosedAt?: string;
+  contractId?: string;
+  id?: string;
+  txHash?: string;
+  inSuccessfulContractCall?: boolean;
+  topic?: unknown[];
+  value?: string;
+}
 
 interface ContractRecord {
   contractId: string;
-  effectCount: number;
+  eventCount: number;
+  firstLedger: number;
+  lastLedger: number;
   lastActivity: string;
-  effectTypes: Record<string, number>;
+  successfulCalls: number;
+  failedCalls: number;
 }
 
 interface CacheEntry {
   expires: number;
   contracts: ContractRecord[];
-  scannedEffects: number;
+  scannedEvents: number;
+  ledgerRange: [number, number] | null;
 }
 
 const cache = new Map<Network, CacheEntry>();
@@ -48,97 +66,112 @@ function resolveNetwork(req: Request): Network {
   return isNetwork(requested) ? requested : 'mainnet';
 }
 
-function horizonUrl(network: Network): string {
-  return HORIZON_URLS[network];
+async function rpc(network: Network, method: string, params: unknown): Promise<any> {
+  const response = await axios.post(
+    RPC_URLS[network],
+    { jsonrpc: '2.0', id: 1, method, params },
+    { timeout: 15000, headers: { 'Content-Type': 'application/json' } },
+  );
+  if (response.data?.error) {
+    throw new Error(response.data.error.message || 'RPC error');
+  }
+  return response.data?.result;
 }
 
-/**
- * Page through recent effects and group contract activity.
- * Bounded by MAX_PAGES so a single request cannot run unbounded.
- */
-async function scanContracts(network: Network): Promise<CacheEntry> {
-  const cached = cache.get(network);
-  if (cached && cached.expires > Date.now()) {
-    return cached;
-  }
+/** Current RPC ledger range, needed because getEvents rejects out-of-range ledgers. */
+async function ledgerRange(network: Network): Promise<[number, number]> {
+  const health = await rpc(network, 'getHealth', {});
+  return [health.oldestLedger, health.latestLedger];
+}
 
-  const base = horizonUrl(network);
-  const byContract = new Map<string, ContractRecord>();
-  let cursor = '';
-  let scanned = 0;
-
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const url: string = `${base}/effects?limit=${PAGE_SIZE}&order=desc${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
-
-    let payload: any;
-    try {
-      const response = await axios.get(url, { timeout: 15000 });
-      payload = response.data;
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'unknown';
-      logger.warn('Contract scan page failed', { network, page, error: message });
-      break;
-    }
-
-    const records: any[] = payload?._embedded?.records ?? [];
-    if (records.length === 0) break;
-
-    for (const effect of records) {
-      scanned++;
-      const contractId: string | undefined = effect.contract;
-      if (!contractId) continue;
-
-      // This Horizon build omits ledger and transaction_hash on effects, so
-      // created_at is the only reliable recency signal available.
-      const createdAt: string = effect.created_at ?? '';
-
-      const existing = byContract.get(contractId);
-      if (existing) {
-        existing.effectCount++;
-        existing.effectTypes[effect.type] = (existing.effectTypes[effect.type] ?? 0) + 1;
-        if (createdAt && (!existing.lastActivity || createdAt > existing.lastActivity)) {
-          existing.lastActivity = createdAt;
-        }
-      } else {
-        byContract.set(contractId, {
-          contractId,
-          effectCount: 1,
-          lastActivity: createdAt,
-          effectTypes: { [effect.type]: 1 },
-        });
-      }
-    }
-
-    const nextHref: string | undefined = payload?._links?.next?.href;
-    if (!nextHref) break;
-    const match = nextHref.match(/cursor=([^&]+)/);
-    cursor = match ? decodeURIComponent(match[1]) : '';
-    if (!cursor) break;
-  }
-
-  const entry: CacheEntry = {
-    expires: Date.now() + CACHE_TTL_MS,
-    contracts: [...byContract.values()].sort((a, b) => b.effectCount - a.effectCount),
-    scannedEffects: scanned,
+function blankRecord(contractId: string): ContractRecord {
+  return {
+    contractId,
+    eventCount: 0,
+    firstLedger: Number.MAX_SAFE_INTEGER,
+    lastLedger: 0,
+    lastActivity: '',
+    successfulCalls: 0,
+    failedCalls: 0,
   };
-  cache.set(network, entry);
-  return entry;
+}
+
+function applyEvent(record: ContractRecord, event: RpcEvent): void {
+  record.eventCount++;
+  const ledger = event.ledger ?? 0;
+  if (ledger > 0) {
+    if (ledger < record.firstLedger) record.firstLedger = ledger;
+    if (ledger > record.lastLedger) {
+      record.lastLedger = ledger;
+      record.lastActivity = event.ledgerClosedAt ?? '';
+    }
+  }
+  if (event.inSuccessfulContractCall) record.successfulCalls++;
+  else record.failedCalls++;
 }
 
 /**
  * GET /api/contracts
- * List contracts seen in the recent-effects window.
- * Optional ?q= filters by contract id substring.
+ * Contracts observed in recent Soroban events.
  */
 router.get('/contracts', async (req: Request, res: Response) => {
   const network = resolveNetwork(req);
   try {
-    const entry = await scanContracts(network);
-    const query = typeof req.query.q === 'string' ? req.query.q.trim().toUpperCase() : '';
+    let entry = cache.get(network);
+    if (entry && entry.expires > Date.now()) {
+      // fall through to filter/respond
+    } else {
+      const [oldest, latest] = await ledgerRange(network);
+      const byContract = new Map<string, ContractRecord>();
+      let cursor: string | undefined;
+      let scanned = 0;
 
-    const contracts = query
-      ? entry.contracts.filter((c) => c.contractId.includes(query))
-      : entry.contracts;
+      for (let page = 0; page < MAX_PAGES; page++) {
+        // getEvents rejects a cursor combined with an explicit ledger range,
+        // so only the first page states the range; later pages page by cursor.
+        const params: Record<string, unknown> = {
+          filters: [{ type: 'contract' }],
+          pagination: { limit: PAGE_SIZE },
+        };
+        if (cursor) {
+          params.pagination = { limit: PAGE_SIZE, cursor };
+        } else {
+          params.startLedger = oldest;
+          params.endLedger = latest;
+        }
+
+        const result = await rpc(network, 'getEvents', params);
+
+        const events: RpcEvent[] = result?.events ?? [];
+        if (events.length === 0) break;
+
+        for (const event of events) {
+          scanned++;
+          if (!event.contractId) continue;
+          const record = byContract.get(event.contractId) ?? blankRecord(event.contractId);
+          applyEvent(record, event);
+          byContract.set(event.contractId, record);
+        }
+
+        cursor = result?.cursor;
+        if (!cursor) break;
+      }
+
+      const contracts = [...byContract.values()]
+        .map((c) => ({ ...c, firstLedger: c.firstLedger === Number.MAX_SAFE_INTEGER ? 0 : c.firstLedger }))
+        .sort((a, b) => b.eventCount - a.eventCount);
+
+      entry = {
+        expires: Date.now() + CACHE_TTL_MS,
+        contracts,
+        scannedEvents: scanned,
+        ledgerRange: [oldest, latest],
+      };
+      cache.set(network, entry);
+    }
+
+    const query = typeof req.query.q === 'string' ? req.query.q.trim().toUpperCase() : '';
+    const contracts = query ? entry.contracts.filter((c) => c.contractId.includes(query)) : entry.contracts;
 
     res.json({
       network,
@@ -146,22 +179,22 @@ router.get('/contracts', async (req: Request, res: Response) => {
       total: contracts.length,
       contracts,
       window: {
-        effectsScanned: entry.scannedEffects,
+        eventsScanned: entry.scannedEvents,
         pages: MAX_PAGES,
+        ledgerRange: entry.ledgerRange,
       },
-      note:
-        'Derived from recent effects. This Horizon build has no contract index, so results cover only the scanned window.',
+      note: 'Derived from recent Soroban events via the JSON-RPC.',
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Contract search failed', { error: message, network });
-    res.status(500).json({ error: 'Contract search failed', message });
+    logger.error('Contract list failed', { error: message, network });
+    res.status(502).json({ error: 'Contract list unavailable', message });
   }
 });
 
 /**
  * GET /api/contracts/:contractId
- * Look up one contract. Reports whether it was observed in the scanned window.
+ * Events emitted by one contract, straight from the RPC.
  */
 router.get('/contracts/:contractId', async (req: Request, res: Response) => {
   const network = resolveNetwork(req);
@@ -176,25 +209,40 @@ router.get('/contracts/:contractId', async (req: Request, res: Response) => {
   }
 
   try {
-    const entry = await scanContracts(network);
-    const record = entry.contracts.find((c) => c.contractId === contractId);
+    const [oldest, latest] = await ledgerRange(network);
+    const result = await rpc(network, 'getEvents', {
+      startLedger: oldest,
+      endLedger: latest,
+      filters: [{ type: 'contract', contractId }],
+      pagination: { limit: 50 },
+    });
+
+    // This build returns unfiltered events when a filter matches nothing,
+    // so only keep events that genuinely belong to the requested contract.
+    const events: RpcEvent[] = ((result?.events ?? []) as RpcEvent[]).filter((e) => e.contractId === contractId);
 
     res.json({
       network,
       contractId,
-      found: Boolean(record),
-      contract: record ?? null,
-      window: {
-        effectsScanned: entry.scannedEffects,
-      },
-      note: record
+      found: events.length > 0,
+      eventCount: events.length,
+      events: events.slice(0, 50).map((e) => ({
+        id: e.id,
+        ledger: e.ledger,
+        ledgerClosedAt: e.ledgerClosedAt,
+        txHash: e.txHash,
+        inSuccessfulContractCall: e.inSuccessfulContractCall,
+        topicCount: Array.isArray(e.topic) ? e.topic.length : 0,
+      })),
+      window: { ledgerRange: [oldest, latest] },
+      note: events.length
         ? undefined
-        : 'No activity for this contract inside the scanned effects window. It may still exist on-chain with no recent effects.',
+        : 'No contract events in the RPC retention window. The contract may still exist with no recent events, or may predate the window.',
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Contract lookup failed', { error: message, network, contractId });
-    res.status(500).json({ error: 'Contract lookup failed', message });
+    res.status(502).json({ error: 'Contract lookup unavailable', message });
   }
 });
 

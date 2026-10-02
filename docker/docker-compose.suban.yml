@@ -142,6 +142,8 @@ services:
       - WEIGHT_ARC=${WEIGHT_ARC:-1.5}
       - SOROBAN_RPC_MAINNET_URL=https://rpc.suban.org
       - SOROBAN_RPC_TESTNET_URL=https://rpc.testnet.minepi.com
+      - CONTRACT_RPC_MAINNET_URL=http://suban-rpc:8000
+      - CONTRACT_RPC_TESTNET_URL=http://stellar-rpc-testnet:8000
     networks:
       - suban-net
 
